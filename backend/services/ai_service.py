@@ -1,20 +1,49 @@
 import requests
 import json
-import re
+import os
+from dotenv import load_dotenv
+load_dotenv()
+# ==============================
+# CONFIG (use .env in real project)
+# ==============================
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+
+# ==============================
+# MAIN FUNCTION
+# ==============================
 def analyze_resume(text):
     try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": "llama3",
-               "prompt": f"""
-You are a resume analyzer.
+        print("Using Groq...")
+        return groq_call(text)
 
-STRICT RULES:
-- Return ONLY valid JSON
-- Do NOT include explanation
-- Do NOT include markdown
-- Do NOT include text outside JSON
+    except Exception as e:
+        print("Groq failed:", e)
+
+        try:
+            print("Falling back to DeepSeek...")
+            return deepseek_call(text)
+
+        except Exception as e:
+            print("DeepSeek also failed:", e)
+            return "{}"
+
+
+# ==============================
+# GROQ FUNCTION
+# ==============================
+def groq_call(text):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    prompt = f"""
+You are a resume analyzer.
+Return ONLY JSON.
 
 Format:
 {{
@@ -25,29 +54,72 @@ Format:
 }}
 
 Resume:
-{text[:1000]}
-""",
-                "stream": False
-            }
-        )
+{text[:800]}
+"""
 
-        data = response.json()
-        raw_output = data.get("response", "")
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3
+    }
 
-        return raw_output
-
-    except Exception as e:
-        print("AI ERROR:", e)
-        return {}
+    response = requests.post(url, headers=headers, json=payload)
     
 
+    data = response.json()
+    if response.status_code == 429:
+     print("Rate limit hit, retrying...")
+    if "choices" not in data:
+        raise Exception(f"Groq API Error: {data}")
+
+    return data["choices"][0]["message"]["content"]
+
+
+# ==============================
+# DEEPSEEK FUNCTION (Fallback)
+# ==============================
+def deepseek_call(text):
+    url = "https://api.deepseek.com/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "user", "content": text[:500]}
+        ]
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    print("DeepSeek RAW RESPONSE:", response.text)  # 🔥 DEBUG
+
+    data = response.json()
+
+    if "choices" not in data:
+        raise Exception(f"DeepSeek API Error: {data}")
+
+    return data["choices"][0]["message"]["content"]
+
+
+# ==============================
+# JSON EXTRACTOR (UNCHANGED)
+# ==============================
+import re
 
 def extract_json(text):
     try:
         text = text.replace("```json", "").replace("```", "").strip()
 
-        if text.startswith("{") and not text.endswith("}"):
-            text += "}"
+        # Extract JSON block safely
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            text = match.group()
 
         data = json.loads(text)
 
