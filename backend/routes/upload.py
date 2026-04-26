@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Depends
+from fastapi import APIRouter, UploadFile, File, Depends, Form
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
@@ -17,11 +17,12 @@ def get_db():
 
 @router.post("/upload")
 async def upload_resume(
-    file: UploadFile = File(...),
+    file: UploadFile = File(...), 
+    job_description: str = Form(None),  
     user=Depends(get_current_user),   # 🔥 ADD THIS
     db: Session = Depends(get_db)
 ):
-    filename, file_bytes, text, ai_result = await save_file(file)
+    filename, file_bytes, text, ai_result = await save_file(file , job_description)
 
     resume = Resume(
         filename=filename,
@@ -29,6 +30,7 @@ async def upload_resume(
         score=ai_result.get("score", 0),
         strengths=ai_result.get("strengths", ""),
         weakness=ai_result.get("weakness", ""),
+        keyskills=ai_result.get("keyskills", ""),  
         suggestions=ai_result.get("suggestions", ""),
         user_id=user["user_id"]   # 🔥 FIXED (dynamic)
     )
@@ -42,5 +44,6 @@ async def upload_resume(
         "score": ai_result.get("score", 0),
         "strengths": ai_result.get("strengths", ""),
         "weakness": ai_result.get("weakness", ""),
+        "keyskills": ai_result.get("keyskills", ""),
         "suggestions": ai_result.get("suggestions", "")
     }

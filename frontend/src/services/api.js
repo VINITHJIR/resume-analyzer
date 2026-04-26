@@ -3,12 +3,12 @@ import axios from "axios";
 const API = "http://127.0.0.1:8000";
 
 // 🔥 ADD THIS (missing function)
-export const analyzeResume = async (file) => {
+export const analyzeResume = async (file , jobDesc) => {
   const token = localStorage.getItem("token");
 
   const formData = new FormData();
   formData.append("file", file);
-
+  formData.append("job_description", jobDesc);
   const res = await axios.post(`${API}/upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",

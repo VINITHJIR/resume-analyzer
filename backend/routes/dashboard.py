@@ -35,6 +35,7 @@ def get_my_resumes(user=Depends(get_current_user), db: Session = Depends(get_db)
             "score": r.score,
             "strengths": r.strengths,
             "weakness": r.weakness,
+            "keyskills": r.keyskills,
             "suggestions": r.suggestions
         }
         for r in resumes

@@ -28,7 +28,7 @@ def get_rag_context(user_text):
         return ""
 
 
-def analyze_resume(text):
+def analyze_resume(text , job_description=None) :
     try:
         print("🔍 Fetching RAG context...")
 
@@ -36,43 +36,46 @@ def analyze_resume(text):
 
         print("Using Groq with RAG...")
         
-        return groq_call(text, context)
+        return groq_call(text, context , job_description)
 
     except Exception as e:
         print("Groq failed:", e)
 
-        try:
-            print("Falling back to DeepSeek...")
-            return deepseek_call(text)
-
-        except Exception as e:
-            print("DeepSeek also failed:", e)
-            return "{}"
 
 
 # ==============================
 # GROQ FUNCTION
 # ==============================
-def groq_call(text, context=""):
+def groq_call(text, context="" , job_description=None):
     url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
+    if job_description:
+        jd_part = f"\nJob Description:\n{job_description[:1500]}"
+        keyskill_instruction = """
+    - Extract missing skills required for this job
+    - Return them as comma-separated values in "keyskills"
+    """
+    else:
+        jd_part = ""
+        keyskill_instruction = """
+    - keyskills must be empty ""
+    """
 
     prompt = f"""
-You are an expert resume analyzer.
-
-You will analyze a resume using reference resumes.
+You are an expert ATS resume analyzer.
 
 Return ONLY JSON.
 
-I want only this Strict Format:
+Strict Format:
 {{
   "score": 85,
   "strengths": "text",
   "weakness": "text",
+  "keyskills": "comma separated skills",
   "suggestions": "text"
 }}
 
@@ -82,11 +85,14 @@ User Resume:
 Reference Resume Data:
 {context[:4000]}
 
+ {jd_part}
+
 Instructions:
-- Compare user resume with reference data
+- Compare resume with reference data
 - Give realistic score
 - Identify missing skills
-- Give improvement suggestions
+{keyskill_instruction}
+- Provide actionable suggestions
 """
 
     payload = {
@@ -109,40 +115,11 @@ Instructions:
     return data["choices"][0]["message"]["content"]
 
 
-# ==============================
-# DEEPSEEK FUNCTION (Fallback)
-# ==============================
-def deepseek_call(text):
-    url = "https://api.deepseek.com/v1/chat/completions"
-
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "user", "content": text[:500]}
-        ]
-    }
-
-    response = requests.post(url, headers=headers, json=payload)
-
-    print("DeepSeek RAW RESPONSE:", response.text)  # 🔥 DEBUG
-
-    data = response.json()
-
-    if "choices" not in data:
-        raise Exception(f"DeepSeek API Error: {data}")
-
-    return data["choices"][0]["message"]["content"]
-
 
 # ==============================
 # JSON EXTRACTOR (UNCHANGED)
 # ==============================
-import re
+import re 
 
 def extract_json(text):
     try:
@@ -159,6 +136,7 @@ def extract_json(text):
             "score": data.get("score", 0),
             "strengths": data.get("strengths", ""),
             "weakness": data.get("weakness", ""),
+            "keyskills": data.get("keyskills", ""), 
             "suggestions": data.get("suggestions", "")
         }
 
@@ -168,5 +146,6 @@ def extract_json(text):
             "score": 0,
             "strengths": "",
             "weakness": "",
+            "keyskills":"",
             "suggestions": ""
         }

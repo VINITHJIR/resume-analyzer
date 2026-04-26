@@ -14,6 +14,6 @@ class Resume(Base):
     strengths = Column(String)
     weakness = Column(String)
     suggestions = Column(String)
-
+    keyskills = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"))  # 🔥 IMPORTANT

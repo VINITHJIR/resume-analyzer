@@ -2,7 +2,7 @@ from services.parser import extract_text
 from services.ai_service import analyze_resume, extract_json
 import pdfplumber
 import io
-async def save_file(file):
+async def save_file(file , job_description=None):
     # 🔥 Read file directly
     file_bytes = await file.read()
 
@@ -10,7 +10,7 @@ async def save_file(file):
     text = extract_text(file_bytes)
 
     # 🔥 AI
-    ai_raw = analyze_resume(text)
+    ai_raw = analyze_resume(text , job_description)
     ai_result = extract_json(ai_raw)
 
     return file.filename, file_bytes, text, ai_result

@@ -76,6 +76,11 @@ function Dashboard() {
                 <p className="font-semibold text-blue-600">💡 Suggestions</p>
                 <p className="text-gray-700">{item.suggestions}</p>
               </div>
+              {/* keyskills */}
+              <div>
+                <p className="font-semibold text-blue-600">💡 Keyskills</p>
+                <p className="text-gray-700">{item.keyskills}</p>
+              </div>
             </div>
           ))}
         </div>

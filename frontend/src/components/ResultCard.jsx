@@ -26,9 +26,18 @@ function ResultCard({ result }) {
       </div>
 
       <div className="bg-gray-50 p-4 rounded">
+        <h3 className="font-semibold">Keyskills</h3>
+        <p>{result.keyskills && (
+        <p><strong>Key Skills:</strong> {result.keyskills}</p>
+        )}</p>
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded">
         <h3 className="font-semibold">Suggestions</h3>
         <p>{result.suggestions}</p>
       </div>
+
+
     </div>
   );
 }

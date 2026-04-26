@@ -5,6 +5,7 @@ import Loader from "./Loader";
 
 function FileUpload() {
   const [file, setFile] = useState(null);
+  const [jobDesc, setJobDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
  const fileInputRef = useRef();
@@ -16,11 +17,11 @@ function FileUpload() {
 
     try {
       setLoading(true);
-      const data = await analyzeResume(file);
+      const data = await analyzeResume(file, jobDesc);
       setResult(data);
     } catch (err) {
       alert("Error analyzing resume");
-      print(err)
+      console.log(err)
     } finally {
       setLoading(false);
     }
@@ -37,11 +38,18 @@ function FileUpload() {
       />
         {file && <p className="text-green-600 mt-2">{file.name}</p>}
       </div>
+          <textarea
+      placeholder="Paste Job Description (optional)"
+      value={jobDesc}
+      onChange={(e) => setJobDesc(e.target.value)}
+      className="border p-3 w-full rounded mb-4"
+      rows={5}
+    />
           <button
       onClick={() => {
         setFile(null);
         setResult(null);
-
+        setJobDesc("");
         // 🔥 Clear input UI
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
