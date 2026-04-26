@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+from services.rag_service import search_resumes
 from dotenv import load_dotenv
 load_dotenv()
 # ==============================
@@ -13,10 +14,29 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 # ==============================
 # MAIN FUNCTION
 # ==============================
+
+def get_rag_context(user_text):
+    try:
+        results = search_resumes(user_text)
+        # take top 3 results only (important)
+        context = "\n\n".join([r["text"] for r in results[:3]])
+
+        return context
+
+    except Exception as e:
+        print("RAG failed:", e)
+        return ""
+
+
 def analyze_resume(text):
     try:
-        print("Using Groq...")
-        return groq_call(text)
+        print("🔍 Fetching RAG context...")
+
+        context = get_rag_context(text)
+
+        print("Using Groq with RAG...")
+        
+        return groq_call(text, context)
 
     except Exception as e:
         print("Groq failed:", e)
@@ -33,7 +53,7 @@ def analyze_resume(text):
 # ==============================
 # GROQ FUNCTION
 # ==============================
-def groq_call(text):
+def groq_call(text, context=""):
     url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
@@ -42,10 +62,13 @@ def groq_call(text):
     }
 
     prompt = f"""
-You are a resume analyzer.
+You are an expert resume analyzer.
+
+You will analyze a resume using reference resumes.
+
 Return ONLY JSON.
 
-Format:
+I want only this Strict Format:
 {{
   "score": 85,
   "strengths": "text",
@@ -53,8 +76,17 @@ Format:
   "suggestions": "text"
 }}
 
-Resume:
-{text[:800]}
+User Resume:
+{text[:2000]}
+
+Reference Resume Data:
+{context[:4000]}
+
+Instructions:
+- Compare user resume with reference data
+- Give realistic score
+- Identify missing skills
+- Give improvement suggestions
 """
 
     payload = {
